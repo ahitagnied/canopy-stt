@@ -5,36 +5,40 @@ from src.model import WhisperAdapter
 from src.data import get_librispeech_datasets, collate_fn
 
 def main():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
+    # use GPU for LLaMA, but CPU for Whisper
+    gpu_device = "cuda" if torch.cuda.is_available() else "cpu"
+    cpu_device = "cpu"
     
-    # load whisper
-    print("Loading Whisper model...")
-    whisper_model = whisper.load_model("base").to(device)
+    print(f"Using device for LLaMA: {gpu_device}")
+    print(f"Using device for Whisper: {cpu_device}")
+    
+    # load Whisper model on CPU only
+    print("Loading Whisper model on CPU...")
+    whisper_model = whisper.load_model("tiny").to(cpu_device)
     whisper_model.eval()
     for p in whisper_model.parameters():
         p.requires_grad = False
     
-    # load llama model and tokenizer
-    print("loading llama model and tokenizer...")
+    # Load LLaMA model and tokenizer on GPU
+    print("Loading LLaMA model and tokenizer...")
     MODEL_ID = "unsloth/Llama-3.2-3B"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     llama = AutoModelForCausalLM.from_pretrained(MODEL_ID)
-    llama.to(device)
+    llama.to(gpu_device)
     
     # 3. Define model dimensions and initialize adapter
     WHISPER_DIM = whisper_model.dims.n_audio_state  # 512
     LLAMA_DIM = llama.config.hidden_size            # 3072
-    ADAPTER_HID = 4096
+    ADAPTER_HID = 1024
     
     print(f"WHISPER_DIM: {WHISPER_DIM}, LLAMA_DIM: {LLAMA_DIM}")
     
     adapter = WhisperAdapter(WHISPER_DIM, ADAPTER_HID, LLAMA_DIM).to(device)
     
     # load datasets
-    print("loading and preprocessing datasets...")
+    print("Loading and preprocessing datasets...")
     train_dataset, val_dataset = get_librispeech_datasets(
-        whisper_model, adapter, tokenizer, device, train_size=500, val_size=100
+        whisper_model, adapter, tokenizer, cpu_device, train_size=50, val_size=10  # Reduce dataset size
     )
     
     # define training arguments
