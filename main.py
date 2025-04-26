@@ -8,14 +8,10 @@ from torch.nn.utils.rnn import pad_sequence
 def main():
     # use GPU for LLaMA, but CPU for Whisper
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    device = "cpu"
+    print(f"using device: {device}")
     
-    print(f"using device for LLaMA: {device}")
-    print(f"using device for Whisper: {device}")
-    
-    # load Whisper model on CPU only
-    print("loading Whisper model on CPU...")
-    whisper_model = whisper.load_model("tiny", device="cpu")
+    # load Whisper model on CPU onlys
+    whisper_model = whisper.load_model("tiny").to(device)
     whisper_model.eval()
     for p in whisper_model.parameters():
         p.requires_grad = False
@@ -84,6 +80,7 @@ def main():
         save_strategy="epoch",
         max_steps=500,
         report_to="none",
+        dataloader_pin_memory=False
     )
     
     # create trainer
