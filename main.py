@@ -6,21 +6,21 @@ from src.data import get_librispeech_datasets, collate_fn
 
 def main():
     # use GPU for LLaMA, but CPU for Whisper
-    gpu_device = "cuda" if torch.cuda.is_available() else "cpu"
+    gpu_device = "cuda:2" if torch.cuda.is_available() else "cpu"
     cpu_device = "cpu"
     
-    print(f"Using device for LLaMA: {gpu_device}")
-    print(f"Using device for Whisper: {cpu_device}")
+    print(f"using device for LLaMA: {gpu_device}")
+    print(f"using device for Whisper: {cpu_device}")
     
     # load Whisper model on CPU only
-    print("Loading Whisper model on CPU...")
-    whisper_model = whisper.load_model("tiny").to(cpu_device)
+    print("loading Whisper model on CPU...")
+    whisper_model = whisper.load_model("tiny", device="cpu")
     whisper_model.eval()
     for p in whisper_model.parameters():
         p.requires_grad = False
     
-    # Load LLaMA model and tokenizer on GPU
-    print("Loading LLaMA model and tokenizer...")
+    # load llama model and tokenizer on GPU
+    print("loading llama model and tokenizer...")
     MODEL_ID = "unsloth/Llama-3.2-3B"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     llama = AutoModelForCausalLM.from_pretrained(MODEL_ID)
@@ -33,7 +33,7 @@ def main():
     
     print(f"WHISPER_DIM: {WHISPER_DIM}, LLAMA_DIM: {LLAMA_DIM}")
     
-    adapter = WhisperAdapter(WHISPER_DIM, ADAPTER_HID, LLAMA_DIM).to(device)
+    adapter = WhisperAdapter(WHISPER_DIM, ADAPTER_HID, LLAMA_DIM).to(gpu_device)
     
     # load datasets
     print("Loading and preprocessing datasets...")
