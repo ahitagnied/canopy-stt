@@ -68,27 +68,27 @@ def get_librispeech_datasets(whisper_model, adapter, tokenizer, device, train_si
     
     return small_train, small_val
 
-def collate_fn(batch):
-    """collate function to handle batches of examples"""
-    embed_list = [ex["inputs_embeds"] for ex in batch]
+# def collate_fn(batch):
+#     """collate function to handle batches of examples"""
+#     embed_list = [ex["inputs_embeds"] for ex in batch]
     
-    embeds_padded = pad_sequence(embed_list, batch_first=True)
+#     embeds_padded = pad_sequence(embed_list, batch_first=True)
     
-    attn_masks = []
-    for ex in batch:
-        mask = torch.cat([
-            ex["attention_mask"],
-            torch.zeros(embeds_padded.size(1) - ex["attention_mask"].size(0), dtype=torch.long)
-        ])
-        attn_masks.append(mask)
+#     attn_masks = []
+#     for ex in batch:
+#         mask = torch.cat([
+#             ex["attention_mask"],
+#             torch.zeros(embeds_padded.size(1) - ex["attention_mask"].size(0), dtype=torch.long)
+#         ])
+#         attn_masks.append(mask)
     
-    attn = torch.stack(attn_masks)
+#     attn = torch.stack(attn_masks)
     
-    label_list = [ex["labels"] for ex in batch]
-    labels_padded = pad_sequence(label_list, batch_first=True, padding_value=-100)
+#     label_list = [ex["labels"] for ex in batch]
+#     labels_padded = pad_sequence(label_list, batch_first=True, padding_value=-100)
     
-    return {
-        "inputs_embeds": embeds_padded,
-        "attention_mask": attn,
-        "labels": labels_padded,
-    }
+#     return {
+#         "inputs_embeds": embeds_padded,
+#         "attention_mask": attn,
+#         "labels": labels_padded,
+#     }
