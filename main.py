@@ -6,7 +6,6 @@ from src.data import get_librispeech_datasets
 from torch.nn.utils.rnn import pad_sequence
 
 def main():
-    # use GPU for LLaMA, but CPU for Whisper
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"using device: {device}")
     
@@ -30,7 +29,7 @@ def main():
 
         B, A, D = prefix_embeds.size()
 
-        # stack & embed your token IDs
+        # stack & embed token IDs
         ids_list   = [ex["labels"] for ex in batch]                             # each is (T_i,)
         input_ids  = pad_sequence(ids_list, batch_first=True,
                     padding_value=tokenizer.pad_token_id).to(device)            # (B, T)
@@ -99,8 +98,8 @@ def main():
     print("Training complete!")
     
     # save adapter
-    torch.save(adapter.state_dict(), "whisper_llama_adapter.pth")
-    print("adapter saved to whisper_llama_adapter.pth")
+    torch.save(adapter.state_dict(), "adapter.pth")
+    print("adapter saved to adapter.pth")
 
 if __name__ == "__main__":
     main()

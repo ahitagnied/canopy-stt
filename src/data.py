@@ -7,7 +7,7 @@ def extract_whisper_features_from_array(whisper_model, wav_array, device):
     """extract whisper features from audio array"""
     audio = torch.from_numpy(wav_array).float()
     
-    # Pad/trim the raw audio to exactly 30 seconds
+    # pad/trim the raw audio to exactly 30 seconds
     audio = whisper.pad_or_trim(audio)
     audio = audio.to(device)
     

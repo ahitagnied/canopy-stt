@@ -3,4 +3,4 @@ __pycache__/
 *.bin
 checkpoints/
 src/__pycache__/
-llama_whisper_adapter
+llama_whisper_adapter/
