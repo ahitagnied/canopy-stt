@@ -1,4 +1,3 @@
-# minimal_adapter_test.py
 import torch
 import whisper
 import argparse
