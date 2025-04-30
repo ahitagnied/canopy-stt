@@ -4,8 +4,10 @@ import torch.nn as nn
 class WhisperAdapter(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, dropout=0.1):
         super().__init__()
+        self.ln1 = nn.LayerNorm(in_dim)
         self.fc1 = nn.Linear(in_dim, hidden_dim * 2)
         self.activation = nn.SiLU()
+        self.ln2 = nn.LayerNorm(hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, out_dim)
         self.dropout = nn.Dropout(dropout)
         
@@ -15,6 +17,7 @@ class WhisperAdapter(nn.Module):
             x = x.to(self.fc1.weight.device)
             
         # pass through first layer
+        x = self.ln1(x)
         x = self.fc1(x)
         
         # split into gate and value
@@ -24,6 +27,7 @@ class WhisperAdapter(nn.Module):
         x = self.activation(v) * torch.sigmoid(gate)
         
         # pass through second layer
+        x = self.ln2(x)
         x = self.fc2(x)
         
         # apply dropout
