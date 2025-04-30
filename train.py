@@ -4,18 +4,40 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingA
 from src.model import WhisperAdapter
 from src.data import get_librispeech_datasets
 from torch.nn.utils.rnn import pad_sequence
+from transformers import TrainerCallback
+import warnings
+
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+class EarlyStoppingCallback(TrainerCallback):
+    def __init__(self, patience=3, min_delta=0.0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_loss = float('inf')
+        self.counter = 0
+        
+    def on_evaluate(self, args, state, control, metrics, **kwargs):
+        current_loss = metrics.get("eval_loss", float('inf'))
+        
+        if current_loss < self.best_loss - self.min_delta:
+            self.best_loss = current_loss
+            self.counter = 0
+        else:
+            self.counter += 1
+                
+        if self.counter >= self.patience:
+            control.should_training_stop = True
+            print(f"Early stopping triggered after {state.global_step} steps!")
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"using device: {device}")
     
-    # load Whisper model on CPU onlys
     whisper_model = whisper.load_model("tiny").to(device)
     whisper_model.eval()
     for p in whisper_model.parameters():
         p.requires_grad = False
     
-    # load llama model and tokenizer on GPU
     print("loading llama model and tokenizer...")
     MODEL_ID = "unsloth/Llama-3.2-3B"
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -64,7 +86,7 @@ def main():
     # load datasets
     print("Loading and preprocessing datasets...")
     train_dataset, val_dataset = get_librispeech_datasets(
-        whisper_model, adapter, tokenizer, device, train_size=50, val_size=10  # Reduce dataset size
+        whisper_model, adapter, tokenizer, device, train_size=1000, val_size=100  # Reduce dataset size
     )
     
     # define training arguments
@@ -73,11 +95,18 @@ def main():
         output_dir="llama_whisper_adapter",
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
-        learning_rate=5e-5,
+        learning_rate=5e-6,
+        weight_decay=0.01,
         fp16=(device=="cuda"),
+        gradient_accumulation_steps=4,
         logging_steps=20,
-        save_strategy="epoch",
-        max_steps=500,
+        eval_strategy="steps",
+        eval_steps=100,  
+        save_strategy="steps",
+        save_steps=100,
+        save_total_limit=5,
+        load_best_model_at_end=True,
+        max_steps=2000,
         report_to="none",
         dataloader_pin_memory=False
     )
@@ -90,12 +119,13 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         data_collator=collate_fn,  
+        callbacks=[EarlyStoppingCallback(patience=3)]
     )
     
     # train
-    print("Starting training...")
+    print("starting training...")
     trainer.train()
-    print("Training complete!")
+    print("training complete!")
     
     # save adapter
     torch.save(adapter.state_dict(), "adapter.pth")
